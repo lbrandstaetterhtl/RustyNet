@@ -17,15 +17,15 @@
 
         pub fn help_all(&self)
         {
-            let ping_args = vec!["--s".to_string(), "--t".to_string(), "--c".to_string(), "--h".to_string()];
-            let ping: Command = Command::new("ping".to_string(), ping_args, Command::handle_ping, Command::help_ping);
+            let commands = Command::get_command_list();
 
-            let commands: Vec<Command> = vec![ping];
             println!("---------------------------------------------------------------------------------");
-            for command in commands {
-                let help = command.help_fn;
-                help(&command);
-                println!("---------------------------------------------------------------------------------");
+            for command in commands.values() {
+                if command.command != "help" && command.command != "exit" {
+                    let help = command.help_fn;
+                    help(&command);
+                    println!("---------------------------------------------------------------------------------");
+                }
             }
         }
     }

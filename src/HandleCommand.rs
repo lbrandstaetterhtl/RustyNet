@@ -1,6 +1,8 @@
 ﻿pub mod command {
+    use std::collections::HashMap;
     use crate::Operate::operate;
 
+    #[derive(Clone)]
     pub struct Command {
         pub valid_args: Vec<String>,
         pub command: String,
@@ -9,6 +11,25 @@
     }
 
     impl Command {
+
+        pub fn get_command_list() -> HashMap<String, Command> {
+            let ping_args = vec!["--s".to_string(), "--t".to_string(), "--c".to_string(), "--h".to_string()];
+            let ping: Command = Command::new("ping".to_string(), ping_args, Command::handle_ping, Command::help_ping);
+
+            let mut null_args = Vec::new();
+            let help: Command = Command::new("help".to_string(), null_args, Command::handle_help, Command::help_all);
+
+            null_args = Vec::new();
+            let exit: Command = Command::new("exit".to_string(), null_args, Command::handle_exit, Command::help_all);
+
+            let mut commands: HashMap<String, Command> = HashMap::new();
+
+            commands.insert("ping".to_string(), ping);
+            commands.insert("help".to_string(), help);
+            commands.insert("exit".to_string(), exit);
+
+            return commands;
+        }
 
         pub fn handle_ping(&self, input: &Input) {
             let mut count = None;
@@ -49,7 +70,7 @@
             operate::operate_exit();
         }
 
-        pub const fn new(command: String, valid_args: Vec<String>, handle_fn: fn(&Command, &Input), help_fn: fn(&Command)) -> Command {
+        pub fn new(command: String, valid_args: Vec<String>, handle_fn: fn(&Command, &Input), help_fn: fn(&Command)) -> Command {
            return Command {
                valid_args,
                command,
@@ -59,25 +80,12 @@
         }
 
         pub fn get_command(input: &Input) -> Command {
-            let ping_args = vec!["--s".to_string(), "--t".to_string(), "--c".to_string(), "--h".to_string()];
-            let ping: Command = Command::new("ping".to_string(), ping_args, Command::handle_ping, Command::help_ping);
+            let commands = Command::get_command_list();
 
-            let mut null_args = Vec::new();
-            let help: Command = Command::new("help".to_string(), null_args, Command::handle_help, Command::help_all);
-
-            null_args = Vec::new();
-            let exit: Command = Command::new("exit".to_string(), null_args, Command::handle_exit, Command::help_all);
-
-            if input.command == exit.command {
-                return exit;
+            return match commands.get(&input.command) {
+                Some(command) => command.clone(),
+                None => {commands["help"].clone()}
             }
-            else if input.command == help.command {
-                return help;
-            }
-            else if input.command == ping.command {
-                return ping;
-            }
-            return help;
         }
     }
 
@@ -95,35 +103,34 @@
                 target
             }
         }
+
+        pub fn parse_input(line: &str) -> Input {
+            let parts = line.trim().split(' ').collect::<Vec<&str>>();
+
+            if parts.len() == 1 {
+                let null_args = Vec::new();
+                return Input::new(null_args, parts[0].to_string(), " ".to_string());
+            }
+
+            let command = parts[0].to_string();
+            let target = parts[1].to_string();
+            let mut args: Vec<String> = Vec::new();
+
+            for i in 2..parts.len() {
+                args.push(parts[i].to_string());
+            }
+
+            return Input::new(args, command, target);
+        }
     }
 }
 
 pub mod handle {
-    use std::process::exit;
     use crate::HandleCommand::command::Command;
     use crate::HandleCommand::command::Input;
 
-    pub fn parse_input(line: &str) -> Input {
-        let parts = line.trim().split(' ').collect::<Vec<&str>>();
-
-        if parts.len() == 1 {
-            let null_args = Vec::new();
-            return Input::new(null_args, parts[0].to_string(), " ".to_string());
-        }
-
-        let command = parts[0].to_string();
-        let target = parts[1].to_string();
-        let mut args: Vec<String> = Vec::new();
-
-        for i in 2..parts.len() {
-            args.push(parts[i].to_string());
-        }
-
-        return Input::new(args, command, target);
-    }
-
     pub fn base(input: &str) {
-        let input_parsed = parse_input(input);
+        let input_parsed = Input::parse_input(input);
         let command = Command::get_command(&input_parsed);
 
 

@@ -12,16 +12,24 @@
     const BOLD: &str = "\x1B[1m";
     const GREEN: &str = "\x1B[32m";
 
-    pub fn header(commands: &Vec<Command>) {
+    pub fn header() {
+        let commands = Command::get_command_list();
+
         println!("{GREEN}{BOLD}{BANNER}");
         println!("  A command-line tool for network maintenance and analysis.");
         println!(" ");
         println!(" ");
         println!("Commands:");
 
-        for i in 0..commands.len() {
-            print!("    {}    ", commands[i].command);
-            if i < commands.len() - 1 {
+        let mut counter = 0;
+        for command in commands.values() {
+            if command.command != "exit" {
+                print!("    {}    ", command.command);
+            }
+            counter += 1;
+
+            if (counter < commands.values().len() - 1)
+            {
                 print!("|");
             }
         }
