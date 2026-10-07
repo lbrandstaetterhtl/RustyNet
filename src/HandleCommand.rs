@@ -38,6 +38,17 @@
             operate::operate_ping(count, size, timeout, &input.target);
         }
 
+        pub fn handle_help(&self, _input: &Input)
+        {
+            let help = self.help_fn;
+            help(self)
+        }
+
+        pub fn handle_exit(&self, _input: &Input)
+        {
+            operate::operate_exit();
+        }
+
         pub const fn new(command: String, valid_args: Vec<String>, handle_fn: fn(&Command, &Input), help_fn: fn(&Command)) -> Command {
            return Command {
                valid_args,
@@ -51,10 +62,22 @@
             let ping_args = vec!["--s".to_string(), "--t".to_string(), "--c".to_string(), "--h".to_string()];
             let ping: Command = Command::new("ping".to_string(), ping_args, Command::handle_ping, Command::help_ping);
 
-            if input.command == ping.command {
+            let mut null_args = Vec::new();
+            let help: Command = Command::new("help".to_string(), null_args, Command::handle_help, Command::help_all);
+
+            null_args = Vec::new();
+            let exit: Command = Command::new("exit".to_string(), null_args, Command::handle_exit, Command::help_all);
+
+            if input.command == exit.command {
+                return exit;
+            }
+            else if input.command == help.command {
+                return help;
+            }
+            else if input.command == ping.command {
                 return ping;
             }
-            return ping;
+            return help;
         }
     }
 
@@ -76,11 +99,17 @@
 }
 
 pub mod handle {
+    use std::process::exit;
     use crate::HandleCommand::command::Command;
     use crate::HandleCommand::command::Input;
 
-    pub fn parse_command(line: &str) -> Input {
+    pub fn parse_input(line: &str) -> Input {
         let parts = line.trim().split(' ').collect::<Vec<&str>>();
+
+        if parts.len() == 1 {
+            let null_args = Vec::new();
+            return Input::new(null_args, parts[0].to_string(), " ".to_string());
+        }
 
         let command = parts[0].to_string();
         let target = parts[1].to_string();
@@ -94,11 +123,16 @@ pub mod handle {
     }
 
     pub fn base(input: &str) {
-        let input_parsed = parse_command(input);
+        let input_parsed = parse_input(input);
         let command = Command::get_command(&input_parsed);
 
 
-        if input_parsed.target == command.valid_args[3] || input_parsed.args.contains(&command.valid_args[3]) {
+        if command.valid_args.len() == 0 {
+            let handle = command.handle_fn;
+            handle(&command, &input_parsed);
+            return;
+        }
+        else if input_parsed.target == command.valid_args[3] || input_parsed.args.contains(&command.valid_args[3]) {
             (command.help_fn)(&command);
             return;
         }

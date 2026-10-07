@@ -1,6 +1,5 @@
 ﻿pub mod operate {
-    use std::process::Command;
-    use std::process::Command as ProcessCommand;
+    use std::process::{exit, Command as ProcessCommand};
 
     pub fn operate_ping(count: Option<u32>, size: Option<u32>, timeout: Option<u32>, target: &String) {
         let mut args: Vec<String> = Vec::new();
@@ -26,5 +25,9 @@
             .args(&args)
             .status()                     
             .expect("ping couldn't be executed");
+    }
+    
+    pub fn operate_exit() {
+        exit(0);
     }
 }
