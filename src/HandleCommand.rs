@@ -1,5 +1,4 @@
 ﻿pub mod command {
-    use crate::Help::help;
     use crate::Operate::operate;
 
     pub struct Command {
@@ -31,7 +30,7 @@
                     i += 1;
                 }
                 else {
-                    println!("{} is not a valid command", input.args[i]);
+                    println!("{} is not a valid argument", input.args[i]);
                 }
                 i += 1;
             }
