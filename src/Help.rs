@@ -21,7 +21,7 @@
 
             println!("---------------------------------------------------------------------------------");
             for command in commands.values() {
-                if command.command != "help" && command.command != "exit" {
+                if command.command != "help" && command.command != "exit" && command.command != "clear" {
                     let help = command.help_fn;
                     help(&command);
                     println!("---------------------------------------------------------------------------------");
@@ -40,18 +40,14 @@
             println!();
             println!("Options:");
             println!("  {:<32} {}", a[0], "Show all info for the given network");
-            println!("  {:<32} {}", a[2], "Show binary representation of the network");
             println!("  {:<32} {}", format!("{} <n>", a[1]), "Split into n equal subnets");
-            println!("  {:<32} {}", format!("{} <len>", a[4]), "Split using a new prefix length");
-            println!("  {:<32} {}", format!("{} <count count ...>", a[5]), "Split into subnets based on host counts");
-            println!("  {:<32} {}", format!("{} <ip>", a[3]), "Check if the network contains a specific IP");
+            println!("  {:<32} {}", format!("{} <len>", a[3]), "Split using a new prefix length");
+            println!("  {:<32} {}", format!("{} <ip>", a[2]), "Check if the network contains a specific IP");
             println!();
             println!("Examples:");
             println!("  {} 10.10.15.0/24 {}", self.command, a[0]);
             println!("  {} 10.10.15.0/24 {} 4", self.command, a[1]);
-            println!("  {} 10.10.15.0/24 {} 26", self.command, a[4]);
             println!("  {} 10.10.15.0/24 {} 10.10.15.42", self.command, a[3]);
-            println!("  {} 10.10.15.0/24 {} 50 100 200", self.command, a[5]);
             println!();
         }
 

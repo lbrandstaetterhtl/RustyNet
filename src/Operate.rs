@@ -5,6 +5,7 @@
     use std::str::FromStr;
     use crate::Operate::operate;
     use crate::Print::print;
+    use std::time::Instant;
 
     #[derive(Clone)]
     pub struct NetInfo {
@@ -245,12 +246,16 @@
         }
         let target_addr = target_addr_result.unwrap();
 
+        println!("{:<5} {:<18} {:<32} {}", "Hop", "Address", "Hostname", "Time");
+        println!("{}", "-".repeat(66));
         while target_addr != reply_addr && ttl <= max_hops {
             let mut ping_args = vec!["-n".to_string(), "1".to_string(), "-w".to_string(), timeout.to_string(), "-i".to_string()];
             ping_args.push(ttl.to_string());
             ping_args.push(target_addr.to_string());
 
+            let start = Instant::now();
             let output_option = run_and_capture("ping", &ping_args);
+            let ms = start.elapsed().as_millis();
 
             if output_option == None {
                 println!("Ping couldn't start!");
@@ -259,21 +264,16 @@
 
             let output = output_option.unwrap();
 
-            let reply_addr_option = find_reply_ip(&output);
+            let Some(addr) = find_reply_ip(&output) else {
+                println!("{:<5} {:<18} {:<32} {}", ttl, "*", "Request timed out", format!(">{timeout}ms"));
+                ttl += 1;
+                continue;
+            };
+            reply_addr = addr;
 
-            if reply_addr_option == None {
-                println!("Couldn't parse reply IP from output!");
-            }
-            else {
-                reply_addr = reply_addr_option.unwrap();
-            }
+            let hostname = if resolve { lookup(reply_addr).unwrap_or("N/A".to_string()) } else { String::new() };
 
-            let mut hostname = String::new();
-            if resolve {
-                hostname = lookup(reply_addr).unwrap()
-            }
-
-            println!("{} | {}     TTL: {}", reply_addr, hostname, ttl.to_string());
+            println!("{:<5} {:<18} {:<32} {}", ttl, reply_addr.to_string(), hostname, format!("{ms}ms"));
             ttl += 1;
         }
 
@@ -283,10 +283,11 @@
     fn lookup(ip: Ipv4Addr) -> Option<String> {
         let text = run_and_capture("nslookup", &[ip.to_string()])?;
 
-        text.lines()
-            .find_map(|line| line.trim_start().strip_prefix("Name:"))
-            .map(|name| name.trim().to_string())
+        let name = text.lines().find_map(|line| line.trim_start().strip_prefix("Name:"))?;
+
+        Some(name.trim().to_string())
     }
+
 
     fn find_reply_ip(text: &String) -> Option<Ipv4Addr> {
         for line in text.lines() {
@@ -305,12 +306,16 @@
     fn run_and_capture(program: &str, args: &[String]) -> Option<String> {
         let output = ProcessCommand::new(program)
             .args(args)
+            .stdin(std::process::Stdio::inherit())
             .output()
             .ok()?;
 
-        Some(String::from_utf8_lossy(&output.stdout).to_string())
+        let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
+        text.push_str(&String::from_utf8_lossy(&output.stderr));
+
+        Some(text)
     }
-    
+
     pub fn operate_exit() {
         exit(0);
     }

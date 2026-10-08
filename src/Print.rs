@@ -6,11 +6,11 @@
     use crate::Print::print;
 
     const BANNER: &str = r#"
- ____               _           _____                _
-|  _ \  _   _  ___ | |_  _   _ |_   _|  ___    ___  | |
-| |_) || | | |/ __|| __|| | | |  | |   / _ \  / _ \ | |
-|  _ < | |_| |\__ \| |_ | |_| |  | |  | (_) || (_) || |
-|_| \_\ \__,_||___/ \__| \__, |  |_|   \___/  \___/ |_|
+ ____               _            _____               _
+|  _ \  _   _  ___ | |_  _   _  |_   _| ___    ___  | |
+| |_) || | | |/ __|| __|| | | |   | |  / _ \  / _ \ | |
+|  _ < | |_| |\__ \| |_ | |_| |   | | | (_) || (_) || |
+|_| \_\ \__,_||___/ \__| \__, |   |_|  \___/  \___/ |_|
                          |___/
 "#;
 
@@ -28,7 +28,7 @@
 
         print!("|");
         for command in commands.values() {
-            if command.command != "exit" {
+            if command.command != "exit" && command.command != "clear" {
                 print!("    {}    ", command.command);
                 print!("|");
             }
@@ -37,6 +37,8 @@
         println!(" ");
         println!(" ");
         println!("  Type '<command> --h' to show help for a command.");
+        println!("  Type 'clear' to clear the screen.");
+        println!("  Type 'exit' to exit the application.");
         println!("{}", "-".repeat(81));
     }
 

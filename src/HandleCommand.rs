@@ -1,6 +1,7 @@
 ﻿pub mod command {
     use std::collections::HashMap;
     use crate::Operate::operate;
+    use crate::Print::print;
 
     #[derive(Clone)]
     pub struct Command {
@@ -22,10 +23,13 @@
             null_args = Vec::new();
             let exit: Command = Command::new("exit".to_string(), null_args, Command::handle_exit, Command::help_all);
 
+            null_args = Vec::new();
+            let clear: Command = Command::new("clear".to_string(), null_args, Command::handle_clear, Command::help_all);
+
             let netcalc_args = vec!["--info".to_string(), "--split".to_string(), "--contains".to_string(), "--prefix".to_string()];
             let netcalc: Command = Command::new("netcalc".to_string(), netcalc_args, Command::handle_netcalc, Command::help_netcalc);
 
-            let trace_args = vec!["--hops".to_string(), "--timeout".to_string(), "--resolve".to_string()];
+            let trace_args = vec!["--ttl".to_string(), "--timeout".to_string(), "--resolve".to_string()];
             let trace: Command = Command::new("trace".to_string(), trace_args, Command::handle_trace, Command::help_trace);
 
             let mut commands: HashMap<String, Command> = HashMap::new();
@@ -33,6 +37,7 @@
             commands.insert("ping".to_string(), ping);
             commands.insert("help".to_string(), help);
             commands.insert("exit".to_string(), exit);
+            commands.insert("clear".to_string(), clear);
             commands.insert("netcalc".to_string(), netcalc);
             commands.insert("trace".to_string(), trace);
 
@@ -112,7 +117,13 @@
         }
 
         pub fn handle_exit(&self, _input: &Input) {
+            clearscreen::clear().expect("Failed to clearscreen");
             operate::operate_exit();
+        }
+
+        pub fn handle_clear(&self, _input: &Input) {
+            clearscreen::clear().expect("Failed to clearscreen");
+            print::header();
         }
 
         pub fn handle_trace(&self, input: &Input) {
@@ -135,6 +146,8 @@
                 else if input.args[i] == self.valid_args[2] {
                     resolve = true;
                 }
+
+                i += 1;
             }
 
             operate::operate_trace(resolve, hops, timeout, &input.target);
@@ -200,7 +213,7 @@ pub mod handle {
     use crate::HandleCommand::command::Input;
 
     pub fn base(input: &str) {
-        let input_parsed = Input::parse_input(input);
+        let input_parsed = Input::parse_input(input.trim());
         let command = Command::get_command(&input_parsed);
 
 
