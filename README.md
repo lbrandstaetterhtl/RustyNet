@@ -4,11 +4,11 @@ Ein interaktives Kommandozeilen-Tool in Rust für Netzwerkwartung und -analyse.
 RustyNet startet eine eigene Shell, in der Befehle wie `ping`, `trace` und `netcalc` ausgeführt werden können.
 
 ```
- ____               _            _____               _
-|  _ \  _   _  ___ | |_  _   _  |_   _| ___    ___  | |
-| |_) || | | |/ __|| __|| | | |   | |  / _ \  / _ \ | |
-|  _ < | |_| |\__ \| |_ | |_| |   | | | (_) || (_) || |
-|_| \_\ \__,_||___/ \__| \__, |   |_|  \___/  \___/ |_|
+ ____               _             _   _        _
+|  _ \  _   _  ___ | |_  _   _   | \ | |  ___ | |_
+| |_) || | | |/ __|| __|| | | |  |  \| | / _ \| __|
+|  _ < | |_| |\__ \| |_ | |_| |  | |\  ||  __/| |_
+|_| \_\ \__,_||___/ \__| \__, |  |_| \_| \___| \__|
                          |___/
 ```
 
