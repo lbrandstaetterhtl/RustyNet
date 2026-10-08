@@ -28,5 +28,51 @@
                 }
             }
         }
+
+        pub fn help_netcalc(&self) {
+            let a = &self.valid_args;
+
+            println!();
+            println!("Usage: {} <network/prefix> [option]", self.command);
+            println!();
+            println!("Arguments:");
+            println!("  {:<32} {}", "network/prefix", "Network in CIDR notation (e.g. 10.10.15.0/24)");
+            println!();
+            println!("Options:");
+            println!("  {:<32} {}", a[0], "Show all info for the given network");
+            println!("  {:<32} {}", a[2], "Show binary representation of the network");
+            println!("  {:<32} {}", format!("{} <n>", a[1]), "Split into n equal subnets");
+            println!("  {:<32} {}", format!("{} <len>", a[4]), "Split using a new prefix length");
+            println!("  {:<32} {}", format!("{} <count count ...>", a[5]), "Split into subnets based on host counts");
+            println!("  {:<32} {}", format!("{} <ip>", a[3]), "Check if the network contains a specific IP");
+            println!();
+            println!("Examples:");
+            println!("  {} 10.10.15.0/24 {}", self.command, a[0]);
+            println!("  {} 10.10.15.0/24 {} 4", self.command, a[1]);
+            println!("  {} 10.10.15.0/24 {} 26", self.command, a[4]);
+            println!("  {} 10.10.15.0/24 {} 10.10.15.42", self.command, a[3]);
+            println!("  {} 10.10.15.0/24 {} 50 100 200", self.command, a[5]);
+            println!();
+        }
+
+        pub fn help_trace(&self) {
+            let a = &self.valid_args;   // 0 hops, 1 timeout, 2 resolve
+
+            println!();
+            println!("Usage: {} <host> [options]", self.command);
+            println!();
+            println!("Arguments:");
+            println!("  {:<25} {}", "host", "Target hostname or IP address");
+            println!();
+            println!("Options:");
+            println!("  {:<25} {}", format!("{} <n>", a[0]), "Maximum number of hops (default: 30)");
+            println!("  {:<25} {}", format!("{} <ms>", a[1]), "Timeout per hop in ms (default: 2000)");
+            println!("  {:<25} {}", a[2], "Resolve hostnames for each hop");
+            println!();
+            println!("Examples:");
+            println!("  {} 8.8.8.8", self.command);
+            println!("  {} google.com {} 20 {}", self.command, a[0], a[2]);
+            println!();
+        }
     }
 }

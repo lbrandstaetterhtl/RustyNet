@@ -1,5 +1,10 @@
 ﻿pub mod print {
     use crate::HandleCommand::command::*;
+    use crate::Operate::operate::*;
+    use std::net::{IpAddr, Ipv4Addr};
+    use crate::Operate::operate;
+    use crate::Print::print;
+
     const BANNER: &str = r#"
  ____               _           _____                _
 |  _ \  _   _  ___ | |_  _   _ |_   _|  ___    ___  | |
@@ -21,23 +26,42 @@
         println!(" ");
         println!("Commands:");
 
-        let mut counter = 0;
         print!("|");
         for command in commands.values() {
             if command.command != "exit" {
                 print!("    {}    ", command.command);
-
-                if counter < commands.values().len() - 1
-                {
-                    print!("|");
-                }
+                print!("|");
             }
-            counter += 1;
         }
 
         println!(" ");
         println!(" ");
         println!("  Type '<command> --h' to show help for a command.");
         println!("{}", "-".repeat(81));
+    }
+
+    pub fn network_info(info: &NetInfo) {
+        println!();
+        println!("  {:<16} {}/{}", "Network:", info.network_addr, info.prefix);
+        println!("  {:<16} {}", "Broadcast:", info.broadcast_addr);
+        println!("  {:<16} {}", "Subnet mask:", Ipv4Addr::from(info.mask));
+        println!("  {:<16} {}", "Wildcard:", Ipv4Addr::from(!info.mask));
+        println!("  {:<16} {}", "First host:", info.first_host);
+        println!("  {:<16} {}", "Last host:", info.last_host);
+        println!("  {:<16} {}", "Usable hosts:", info.host_count);
+        println!();
+    }
+
+    pub fn network_info_list(nets: Vec<String>) {
+        for net in nets {
+            let info = get_network_info(&net);
+
+            if info.is_err() {
+                println!("{}", info.err().unwrap().to_string());
+                return;
+            }
+
+            network_info(&info.ok().unwrap());
+        }
     }
 }

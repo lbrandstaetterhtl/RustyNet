@@ -13,7 +13,7 @@
     impl Command {
 
         pub fn get_command_list() -> HashMap<String, Command> {
-            let ping_args = vec!["--size".to_string(), "--timeout".to_string(), "--c".to_string(), "--h".to_string()];
+            let ping_args = vec!["--size".to_string(), "--timeout".to_string(), "--count".to_string()];
             let ping: Command = Command::new("ping".to_string(), ping_args, Command::handle_ping, Command::help_ping);
 
             let mut null_args = Vec::new();
@@ -22,14 +22,19 @@
             null_args = Vec::new();
             let exit: Command = Command::new("exit".to_string(), null_args, Command::handle_exit, Command::help_all);
 
-            let netcalc_args = vec!["--info".to_string(), "--split".to_string(), "--bin".to_string(), "--contains".to_string(), "--prefix".to_string(), "--splitByHosts".to_string()];
-            let netcalc: Command = Command::new("netcalc".to_string(), netcalc_args, Command::handle_netcalc, )
+            let netcalc_args = vec!["--info".to_string(), "--split".to_string(), "--contains".to_string(), "--prefix".to_string()];
+            let netcalc: Command = Command::new("netcalc".to_string(), netcalc_args, Command::handle_netcalc, Command::help_netcalc);
+
+            let trace_args = vec!["--hops".to_string(), "--timeout".to_string(), "--resolve".to_string()];
+            let trace: Command = Command::new("trace".to_string(), trace_args, Command::handle_trace, Command::help_trace);
 
             let mut commands: HashMap<String, Command> = HashMap::new();
 
             commands.insert("ping".to_string(), ping);
             commands.insert("help".to_string(), help);
             commands.insert("exit".to_string(), exit);
+            commands.insert("netcalc".to_string(), netcalc);
+            commands.insert("trace".to_string(), trace);
 
             return commands;
         }
@@ -65,10 +70,11 @@
         pub fn handle_netcalc(&self, input: &Input) {
             let mut info = false;
             let mut split = false;
+            let mut split_value = String::new();
             let mut contains = false;
+            let mut contains_value = String::new();
             let mut prefix = false;
-            let mut bin = false;
-            let mut split_by_hosts = false;
+            let mut prefix_value = String::new();
 
             let mut i = 0;
             while i < input.args.len() {
@@ -78,37 +84,60 @@
 
                 if input.args[i] == self.valid_args[1] {
                     split = true;
+                    split_value = input.args[i + 1].trim().to_string();
+                    i += 1;
                 }
 
                 if input.args[i] == self.valid_args[2] {
-                    bin = true;
+                    contains = true;
+                    contains_value = input.args[i + 1].trim().to_string();
+                    i += 1;
                 }
 
                 if input.args[i] == self.valid_args[3] {
-                    contains = true;
-                }
-
-                if input.args[i] == self.valid_args[4] {
                     prefix = true;
+                    prefix_value = input.args[i + 1].trim().to_string();
+                    i += 1;
                 }
 
-                if input.args[i] == self.valid_args[5] {
-                    split_by_hosts = true;
-                }
+                i += 1;
             }
 
-            operate::operate_netcalc(&input.target,info, split, bin, prefix, contains, split_by_hosts);
+            operate::operate_netcalc(&input.target,info, split, &split_value, prefix, &prefix_value, contains, &contains_value);
         }
 
-        pub fn handle_help(&self, _input: &Input)
-        {
+        pub fn handle_help(&self, _input: &Input) {
             let help = self.help_fn;
             help(self)
         }
 
-        pub fn handle_exit(&self, _input: &Input)
-        {
+        pub fn handle_exit(&self, _input: &Input) {
             operate::operate_exit();
+        }
+
+        pub fn handle_trace(&self, input: &Input) {
+            let mut resolve = false;
+            let mut hops = 0;
+            let mut timeout = 0;
+
+            let mut i = 0;
+            while i < input.args.len() {
+                if input.args[i] == self.valid_args[0] {
+                    hops = input.args[i + 1].trim().parse::<i32>().unwrap();
+                    i += 1;
+                }
+
+                if input.args[i] == self.valid_args[1] {
+                    timeout = input.args[i + 1].trim().parse::<i32>().unwrap();
+                    i += 1;
+                }
+
+                else if input.args[i] == self.valid_args[2] {
+                    resolve = true;
+                }
+            }
+
+            operate::operate_trace(resolve, hops, timeout, &input.target);
         }
 
         pub fn new(command: String, valid_args: Vec<String>, handle_fn: fn(&Command, &Input), help_fn: fn(&Command)) -> Command {
@@ -180,7 +209,10 @@ pub mod handle {
             handle(&command, &input_parsed);
             return;
         }
-        else if input_parsed.target == command.valid_args[3] || input_parsed.args.contains(&command.valid_args[3]) {
+
+        let is_help = input_parsed.target == "--h" || input_parsed.args.iter().any(|a| a == "--h");
+
+        if is_help {
             (command.help_fn)(&command);
             return;
         }
