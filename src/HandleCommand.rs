@@ -13,7 +13,7 @@
     impl Command {
 
         pub fn get_command_list() -> HashMap<String, Command> {
-            let ping_args = vec!["--s".to_string(), "--t".to_string(), "--c".to_string(), "--h".to_string()];
+            let ping_args = vec!["--size".to_string(), "--timeout".to_string(), "--c".to_string(), "--h".to_string()];
             let ping: Command = Command::new("ping".to_string(), ping_args, Command::handle_ping, Command::help_ping);
 
             let mut null_args = Vec::new();
@@ -21,6 +21,9 @@
 
             null_args = Vec::new();
             let exit: Command = Command::new("exit".to_string(), null_args, Command::handle_exit, Command::help_all);
+
+            let netcalc_args = vec!["--info".to_string(), "--split".to_string(), "--bin".to_string(), "--contains".to_string(), "--prefix".to_string(), "--splitByHosts".to_string()];
+            let netcalc: Command = Command::new("netcalc".to_string(), netcalc_args, Command::handle_netcalc, )
 
             let mut commands: HashMap<String, Command> = HashMap::new();
 
@@ -57,6 +60,44 @@
             }
 
             operate::operate_ping(count, size, timeout, &input.target);
+        }
+
+        pub fn handle_netcalc(&self, input: &Input) {
+            let mut info = false;
+            let mut split = false;
+            let mut contains = false;
+            let mut prefix = false;
+            let mut bin = false;
+            let mut split_by_hosts = false;
+
+            let mut i = 0;
+            while i < input.args.len() {
+                if input.args[i] == self.valid_args[0] {
+                    info = true;
+                }
+
+                if input.args[i] == self.valid_args[1] {
+                    split = true;
+                }
+
+                if input.args[i] == self.valid_args[2] {
+                    bin = true;
+                }
+
+                if input.args[i] == self.valid_args[3] {
+                    contains = true;
+                }
+
+                if input.args[i] == self.valid_args[4] {
+                    prefix = true;
+                }
+
+                if input.args[i] == self.valid_args[5] {
+                    split_by_hosts = true;
+                }
+            }
+
+            operate::operate_netcalc(&input.target,info, split, bin, prefix, contains, split_by_hosts);
         }
 
         pub fn handle_help(&self, _input: &Input)

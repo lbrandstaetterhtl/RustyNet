@@ -22,16 +22,17 @@
         println!("Commands:");
 
         let mut counter = 0;
+        print!("|");
         for command in commands.values() {
             if command.command != "exit" {
                 print!("    {}    ", command.command);
+
+                if counter < commands.values().len() - 1
+                {
+                    print!("|");
+                }
             }
             counter += 1;
-
-            if (counter < commands.values().len() - 1)
-            {
-                print!("|");
-            }
         }
 
         println!(" ");

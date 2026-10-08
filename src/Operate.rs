@@ -26,6 +26,11 @@
             .status()                     
             .expect("ping couldn't be executed");
     }
+
+    pub fn operate_netcalc(network_cidr: &String, info: bool, split: bool, bin: bool, prefix: bool, contains: bool, split_by_hosts: bool)
+    {
+
+    }
     
     pub fn operate_exit() {
         exit(0);
