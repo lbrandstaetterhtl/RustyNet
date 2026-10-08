@@ -1,9 +1,7 @@
 ﻿pub mod operate {
-    use std::io::Split;
-    use std::net::{IpAddr, Ipv4Addr};
+    use std::net::Ipv4Addr;
     use std::process::{exit, Command as ProcessCommand};
     use std::str::FromStr;
-    use crate::Operate::operate;
     use crate::Print::print;
     use std::time::Instant;
 
