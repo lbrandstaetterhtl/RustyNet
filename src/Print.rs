@@ -1,6 +1,7 @@
 ﻿pub mod print {
     use crate::HandleCommand::command::*;
-    use crate::Operate::operate::*;
+    use crate::Operate::operate::NetInfo;
+    use crate::Operate::operate::get_network_info;
     use std::net::Ipv4Addr;
 
     const BANNER: &str = r#"

@@ -1,9 +1,11 @@
 ﻿pub mod operate {
-    use std::net::Ipv4Addr;
+    use std::fs::FileTimes;
+    use std::net::{Ipv4Addr, SocketAddr, ToSocketAddrs};
     use std::process::{exit, Command as ProcessCommand};
     use std::str::FromStr;
     use crate::Print::print;
-    use std::time::Instant;
+    use std::time::{Duration, Instant};
+    use std::net::TcpStream;
 
     #[derive(Clone)]
     pub struct NetInfo {
@@ -29,8 +31,8 @@
             }
         }
 
-        pub fn contains(&self, test_ip: &String) -> bool {
-            let test_cidr = format!("{}/{}", test_ip, self.prefix);
+        pub fn contains(&self, test_ip: Ipv4Addr) -> bool {
+            let test_cidr = format!("{}/{}", test_ip.to_string(), self.prefix);
             let test_info = get_network_info(&test_cidr);
 
             if test_info.is_err() {
@@ -69,7 +71,6 @@
 
     pub fn operate_netcalc(network_cidr: &String, info: bool, split: bool, split_value: &String, prefix: bool, prefix_value: &String, contains: bool, contains_value: &String) {
         if info {
-            println!("------------------------------------------------------------------------------");
             let info = get_network_info(network_cidr);
 
             if info.is_err() {
@@ -77,12 +78,12 @@
                 return;
             }
 
+            println!("------------------------------------------------------------------------------");
             print::network_info(&info.ok().unwrap());
             println!("------------------------------------------------------------------------------");
         }
 
         if prefix {
-            println!("------------------------------------------------------------------------------");
             let new_prefix = u32::from_str(prefix_value);
 
             if new_prefix.is_err() {
@@ -97,12 +98,12 @@
                 return;
             }
 
+            println!("------------------------------------------------------------------------------");
             print::network_info_list(nets.ok().unwrap());
             println!("------------------------------------------------------------------------------");
         }
 
         if split {
-            println!("------------------------------------------------------------------------------");
             let count = u32::from_str(split_value);
             if count.is_err() {
                 println!("{}", count.err().unwrap().to_string());
@@ -116,21 +117,29 @@
                 return;
             }
 
+            println!("------------------------------------------------------------------------------");
             print::network_info_list(nets.ok().unwrap());
             println!("------------------------------------------------------------------------------");
         }
 
         if contains {
-            println!("------------------------------------------------------------------------------");
             let info = get_network_info(network_cidr);
-            let info_to_print = info.clone().unwrap();
             if info.is_err() {
                 println!("{}", info.err().unwrap().to_string());
                 return;
             }
+            let info_to_print = info.clone().unwrap();
 
-            let result = info.ok().unwrap().contains(contains_value);
+            let ip_to_check_result = get_ip_from_str(contains_value);
 
+            if ip_to_check_result.is_err() {
+                println!("{}", ip_to_check_result.err().unwrap().to_string());
+                return;
+            }
+
+            let result = info_to_print.contains(ip_to_check_result.unwrap());
+
+            println!("------------------------------------------------------------------------------");
             match result {
                 true => {println!("{}/{} contains {}", info_to_print.network_addr, info_to_print.prefix, contains_value)}
                 false => {println!("{}/{} does not contain {}", info_to_print.network_addr, info_to_print.prefix, contains_value)}
@@ -190,9 +199,12 @@
             return Err("Invalid format. Use network/prefix, 10.10.15.0/24".to_string());
         };
 
-        let ip = Ipv4Addr::from_str(ip_str).unwrap();
-        let prefix = u32::from_str(prefix_str).unwrap();
+        let ip = Ipv4Addr::from_str(ip_str).unwrap_or_else(|_| Ipv4Addr::UNSPECIFIED);
+        let prefix = u32::from_str(prefix_str).unwrap_or_else(|_| u32::MAX);
 
+        if ip == Ipv4Addr::UNSPECIFIED || prefix == u32::MAX {
+            return Err("Invalid format. Use network/prefix, 10.10.15.0/24".to_string());
+        }
 
         let mut mask: u32 = 0;
 
@@ -244,6 +256,7 @@
         }
         let target_addr = target_addr_result.unwrap();
 
+        println!("Tracing {target_addr} (max {max_hops} hops, timeout {timeout}ms)");
         println!("{:<5} {:<18} {:<32} {}", "Hop", "Address", "Hostname", "Time");
         println!("{}", "-".repeat(66));
         while target_addr != reply_addr && ttl <= max_hops {
@@ -269,7 +282,7 @@
             };
             reply_addr = addr;
 
-            let hostname = if resolve { lookup(reply_addr).unwrap_or("N/A".to_string()) } else { String::new() };
+            let hostname = if resolve { lookup_hostname(reply_addr).unwrap_or("N/A".to_string()) } else { String::new() };
 
             println!("{:<5} {:<18} {:<32} {}", ttl, reply_addr.to_string(), hostname, format!("{ms}ms"));
             ttl += 1;
@@ -278,7 +291,7 @@
         println!("Trace finished!");
     }
 
-    fn lookup(ip: Ipv4Addr) -> Option<String> {
+    fn lookup_hostname(ip: Ipv4Addr) -> Option<String> {
         let text = run_and_capture("nslookup", &[ip.to_string()])?;
 
         let name = text.lines().find_map(|line| line.trim_start().strip_prefix("Name:"))?;
@@ -286,6 +299,21 @@
         Some(name.trim().to_string())
     }
 
+    pub fn lookup_addr(hostname: &String) -> Option<Ipv4Addr> {
+        let text = run_and_capture("nslookup", &[hostname.to_string()])?;
+
+         let addr = text.lines().skip_while(|l| !l.contains("Addresses:"))
+            .skip(1)
+            .find_map(|line| {
+                let trimmed = line.trim();
+                trimmed.parse::<Ipv4Addr>().ok()
+            });
+
+        match addr {
+            Some(addr) => Some(addr),
+            None => None,
+        }
+    }
 
     fn find_reply_ip(text: &String) -> Option<Ipv4Addr> {
         for line in text.lines() {
@@ -314,7 +342,80 @@
         Some(text)
     }
 
+    const COMMON_PORTS: &[u16] = &[21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 1433, 3306, 3389, 5432, 5900, 8080, 8443];
+
+    pub fn operate_portscan(ports: Vec<u16>, range: [u32; 2], common: bool, timeout: u64, target: Ipv4Addr) {
+        let mut open_ports = 0;
+        let mut closed_ports = 0;
+        let mut ports_empty = false;
+        println!("{:<6} | {:<15} | {:<10} | {}", "Port", "Target", "Status", "Info");
+        println!("{}", "-".repeat(66));
+        if ports.is_empty() {ports_empty = true;}
+        else {
+            for port in ports {
+                let result = test_port(target, timeout, port);
+
+                match result {
+                    Ok(output) => {println!("{}", output); open_ports += 1;}
+                    Err(error) => {println!("{}", error); closed_ports += 1;}
+                }
+            }
+        }
+
+        if common == false && ports_empty {
+            for i  in range[0]..range[1]+1 {
+                let result = test_port(target, timeout, i as u16);
+
+                match result {
+                    Ok(output) => {println!("{}", output); open_ports += 1;}
+                    Err(error) => {println!("{}", error); closed_ports += 1;}
+                }
+            }
+        }
+        else if common == true && ports_empty {
+            for port in COMMON_PORTS {
+                let result = test_port(target, timeout, *port);
+
+                match result {
+                    Ok(output) => {println!("{}", output); open_ports += 1;}
+                    Err(error) => {println!("{}", error); closed_ports += 1;}
+                }
+            }
+        }
+
+        println!("Scan on target {} finished!", target);
+        println!("{} open ports", open_ports);
+        println!("{} closed ports", closed_ports);
+        println!("{}", "-".repeat(66));
+    }
+
+    fn test_port (target: Ipv4Addr, timeout: u64, port: u16) -> Result<String, String> {
+        let socket_addr = (target, port).to_socket_addrs().unwrap().next();
+
+        if socket_addr.is_none() {
+            println!("Couldn't test port {} on target {}", port, target);
+        }
+
+        let duration = Duration::from_millis(timeout);
+        let result = TcpStream::connect_timeout(&socket_addr.unwrap(), duration);
+
+        match result {
+            Ok(_stream) => Ok(format!("{:<6} | {:<15} | {:<7} | {}", port, target, "open", "")),
+            Err(err) => Err(format!("{:<6} | {:<15} | {:<7} | {}", port, target, "closed", err)),
+        }
+    }
+
     pub fn operate_exit() {
         exit(0);
+    }
+
+    pub fn get_ip_from_str(str: &String) -> Result<Ipv4Addr, String> {
+        let ip = str.parse::<Ipv4Addr>();
+
+        if ip.is_err() {
+            return Err(ip.err().unwrap().to_string());
+        }
+
+        Ok(ip.unwrap())
     }
 }

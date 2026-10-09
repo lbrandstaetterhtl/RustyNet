@@ -70,5 +70,27 @@
             println!("  {} google.com {} 20 {}", self.command, a[0], a[2]);
             println!();
         }
+
+        pub fn help_portscan(&self) {
+            let a = &self.valid_args;
+
+            println!();
+            println!("Usage: {} <host> [options]", self.command);
+            println!();
+            println!("Arguments:");
+            println!("  {:<25} {}", "host", "Target hostname or IP address");
+            println!();
+            println!("Options:");
+            println!("  {:<25} {}", format!("{} <n,n,...>", a[0]), "Scan specific ports (comma-separated)");
+            println!("  {:<25} {}", format!("{} <start-end>", a[1]), "Scan a range of ports");
+            println!("  {:<25} {}", a[2], "Scan common ports (22, 80, 443, 3389, ...)");
+            println!("  {:<25} {}", format!("{} <ms>", a[3]), "Timeout per port in ms (default: 500)");
+            println!();
+            println!("Examples:");
+            println!("  {} 192.168.0.1 {}", self.command, a[2]);
+            println!("  {} 192.168.0.1 {} 22,80,443", self.command, a[0]);
+            println!("  {} 192.168.0.1 {} 1-1024 {} 100", self.command, a[1], a[3]);
+            println!();
+        }
     }
 }

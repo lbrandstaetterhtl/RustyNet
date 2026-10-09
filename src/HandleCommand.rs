@@ -1,6 +1,8 @@
 ﻿pub mod command {
     use std::collections::HashMap;
+    use std::net::Ipv4Addr;
     use crate::Operate::operate;
+    use crate::Operate::operate::get_ip_from_str;
     use crate::Print::print;
 
     #[derive(Clone)]
@@ -32,6 +34,9 @@
             let trace_args = vec!["--ttl".to_string(), "--timeout".to_string(), "--resolve".to_string()];
             let trace: Command = Command::new("trace".to_string(), trace_args, Command::handle_trace, Command::help_trace);
 
+            let portscan_args = vec!["--ports".to_string(), "--range".to_string(), "--common".to_string(), "--timeout".to_string()];
+            let portscan: Command = Command::new("portscan".to_string(), portscan_args, Command::handle_portscan, Command::help_portscan);
+
             let mut commands: HashMap<String, Command> = HashMap::new();
 
             commands.insert("ping".to_string(), ping);
@@ -40,6 +45,7 @@
             commands.insert("clear".to_string(), clear);
             commands.insert("netcalc".to_string(), netcalc);
             commands.insert("trace".to_string(), trace);
+            commands.insert("portscan".to_string(), portscan);
 
             return commands;
         }
@@ -151,6 +157,72 @@
             }
 
             operate::operate_trace(resolve, hops, timeout, &input.target);
+        }
+
+        pub fn handle_portscan(&self, input: &Input) {
+            let mut range = [0, 1023];
+            let mut common = false;
+            let mut ports: Vec<u16> = Vec::new();
+            let mut timeout: u64 = 2000;
+
+            let mut i = 0;
+            while i < input.args.len() {
+                if input.args[i] == self.valid_args[0] {
+                    let split = input.args[i+1].split(',').collect::<Vec<&str>>();
+
+                    for j in 0..split.len() {
+                        ports.push(split[j].trim().parse::<u16>().unwrap_or(0));
+                    }
+                    i+=1;
+                }
+
+                if input.args[i] == self.valid_args[1] {
+                    let split = input.args[i+1].split('-').collect::<Vec<&str>>();
+
+                    if split.len() != 2 {
+                        println!("{} is not a valid port", input.args[i]);
+                        return;
+                    }
+
+                    range = [split[0].trim().parse::<u32>().unwrap(), split[1].trim().parse::<u32>().unwrap()];
+                    i+=1;
+                }
+
+                if input.args[i] == self.valid_args[2] {
+                    common = true;
+                }
+
+                if input.args[i] == self.valid_args[3] {
+                    timeout = input.args[i+1].trim().parse::<u64>().unwrap();
+                    i+=1;
+                }
+
+                i+=1;
+            }
+
+            let target_result = get_ip_from_str(&input.target);
+            let lookup_result;
+            let target: Ipv4Addr;
+            if target_result.is_err() {
+                lookup_result = operate::lookup_addr(&input.target);
+
+                if lookup_result == None {
+                    println!("{} is not a valid target", input.target);
+                    return;
+                }
+                else {
+                    target = lookup_result.unwrap_or(Ipv4Addr::new(0, 0, 0, 0));
+                }
+            }
+            else {
+                target = target_result.unwrap_or(Ipv4Addr::new(0,0,0,0));
+            }
+
+            if target == Ipv4Addr::new(0,0,0,0) {
+                println!("{} is not a valid target", input.args[i]);
+            }
+
+            operate::operate_portscan(ports, range, common, timeout, target);
         }
 
         pub fn new(command: String, valid_args: Vec<String>, handle_fn: fn(&Command, &Input), help_fn: fn(&Command)) -> Command {
