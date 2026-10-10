@@ -6,9 +6,9 @@
             println!("Usage: {} <target> [OPTIONS]", self.command);
             println!();
             println!("Options:");
-            println!("  {:<14} Packet size in bytes", format!("{} <bytes>", self.valid_args[0]));
-            println!("  {:<14} Timeout per reply in ms", format!("{} <ms>", self.valid_args[1]));
-            println!("  {:<14} Number of pings", format!("{} <count>", self.valid_args[2]));
+            println!("  {:<14} Packet size in bytes (default: 64 bytes)", format!("{} <bytes>", self.valid_args[0]));
+            println!("  {:<14} Timeout per reply in ms (default: 500ms)", format!("{} <ms>", self.valid_args[1]));
+            println!("  {:<14} Number of pings (default: 4)", format!("{} <count>", self.valid_args[2]));
             println!();
             println!("Example:");
             println!("  {} google.com {} 4 {} 64 {} 1000",

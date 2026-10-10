@@ -1,9 +1,12 @@
 ﻿pub mod command {
     use std::collections::HashMap;
     use std::net::Ipv4Addr;
+    use std::num::ParseIntError;
+    use std::string::ParseError;
     use crate::Operate::operate;
     use crate::Operate::operate::get_ip_from_str;
     use crate::Print::print;
+    use regex::Regex;
 
     #[derive(Clone)]
     pub struct Command {
@@ -51,22 +54,22 @@
         }
 
         pub fn handle_ping(&self, input: &Input) {
-            let mut count = None;
-            let mut size = None;
-            let mut timeout = None;
+            let mut count: Result<u32, ParseIntError> = "a".parse::<u32>();
+            let mut size: Result<u32, ParseIntError> = "a".parse::<u32>();
+            let mut timeout: Result<u32, ParseIntError> = "a".parse::<u32>();
 
             let mut i = 0;
             while i < input.args.len() {
                 if input.args[i] == self.valid_args[0] {
-                    size = Some(input.args[i + 1].trim().parse::<u32>().unwrap());
+                    size = input.args[i + 1].trim().parse::<u32>();
                     i += 1;
                 }
                 else if input.args[i] == self.valid_args[1] {
-                    timeout = Some(input.args[i + 1].trim().parse::<u32>().unwrap());
+                    timeout = input.args[i + 1].trim().parse::<u32>();
                     i += 1;
                 }
                 else if input.args[i] == self.valid_args[2] {
-                    count = Some(input.args[i + 1].trim().parse::<u32>().unwrap());
+                    count = input.args[i + 1].trim().parse::<u32>();
                     i += 1;
                 }
                 else {
@@ -80,12 +83,9 @@
 
         pub fn handle_netcalc(&self, input: &Input) {
             let mut info = false;
-            let mut split = false;
-            let mut split_value = String::new();
-            let mut contains = false;
-            let mut contains_value = String::new();
-            let mut prefix = false;
-            let mut prefix_value = String::new();
+            let mut split_value:Result<u32, ParseIntError> = "a".parse::<u32>();
+            let mut contains_value:Result<String, bool> = Err(false);
+            let mut prefix_value:Result<u32, ParseIntError> = "a".parse::<u32>();
 
             let mut i = 0;
             while i < input.args.len() {
@@ -94,27 +94,24 @@
                 }
 
                 if input.args[i] == self.valid_args[1] {
-                    split = true;
-                    split_value = input.args[i + 1].trim().to_string();
+                    split_value = input.args[i + 1].trim().parse::<u32>();
                     i += 1;
                 }
 
                 if input.args[i] == self.valid_args[2] {
-                    contains = true;
-                    contains_value = input.args[i + 1].trim().to_string();
+                    contains_value = Ok(input.args[i + 1].trim().to_string());
                     i += 1;
                 }
 
                 if input.args[i] == self.valid_args[3] {
-                    prefix = true;
-                    prefix_value = input.args[i + 1].trim().to_string();
+                    prefix_value = input.args[i + 1].trim().parse::<u32>();
                     i += 1;
                 }
 
                 i += 1;
             }
 
-            operate::operate_netcalc(&input.target,info, split, &split_value, prefix, &prefix_value, contains, &contains_value);
+            operate::operate_netcalc(&input.target, info, split_value, prefix_value, contains_value);
         }
 
         pub fn handle_help(&self, _input: &Input) {
@@ -134,18 +131,18 @@
 
         pub fn handle_trace(&self, input: &Input) {
             let mut resolve = false;
-            let mut hops = 0;
-            let mut timeout = 0;
+            let mut hops: Result<u32, ParseIntError> = "a".parse::<u32>(); ;
+            let mut timeout: Result<u32, ParseIntError> = "a".parse::<u32>();
 
             let mut i = 0;
             while i < input.args.len() {
                 if input.args[i] == self.valid_args[0] {
-                    hops = input.args[i + 1].trim().parse::<i32>().unwrap();
+                    hops = input.args[i + 1].trim().parse::<u32>();
                     i += 1;
                 }
 
                 if input.args[i] == self.valid_args[1] {
-                    timeout = input.args[i + 1].trim().parse::<i32>().unwrap();
+                    timeout = input.args[i + 1].trim().parse::<u32>();
                     i += 1;
                 }
 
@@ -160,7 +157,7 @@
         }
 
         pub fn handle_portscan(&self, input: &Input) {
-            let mut range = [0, 1023];
+            let mut range = None;
             let mut common = false;
             let mut ports: Vec<u16> = Vec::new();
             let mut timeout: u64 = 2000;
@@ -177,14 +174,18 @@
                 }
 
                 if input.args[i] == self.valid_args[1] {
-                    let split = input.args[i+1].split('-').collect::<Vec<&str>>();
+                    let regex = Regex::new(r"(\d+)-(\d+)").unwrap();
 
-                    if split.len() != 2 {
-                        println!("{} is not a valid port", input.args[i]);
+                    let caps = regex.captures(&input.args[i+1]);
+
+                    if caps.is_none() {
+                        println!("{} is not a valid range", input.args[i+1]);
                         return;
                     }
 
-                    range = [split[0].trim().parse::<u32>().unwrap(), split[1].trim().parse::<u32>().unwrap()];
+                    let split = input.args[i+1].split('-').collect::<Vec<&str>>();
+
+                    range = Some([split[0].trim().parse::<u32>().unwrap(), split[1].trim().parse::<u32>().unwrap()]);
                     i+=1;
                 }
 
@@ -219,7 +220,11 @@
             }
 
             if target == Ipv4Addr::new(0,0,0,0) {
-                println!("{} is not a valid target", input.args[i]);
+                println!("{} is not a valid target", input.target);
+            }
+
+            if range == None && ports.is_empty() && common == false {
+                common = true;
             }
 
             operate::operate_portscan(ports, range, common, timeout, target);

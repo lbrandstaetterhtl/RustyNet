@@ -6,6 +6,7 @@
     use crate::Print::print;
     use std::time::{Duration, Instant};
     use std::net::TcpStream;
+    use std::num::ParseIntError;
 
     #[derive(Clone)]
     pub struct NetInfo {
@@ -43,23 +44,19 @@
         }
     }
 
-    pub fn operate_ping(count: Option<u32>, size: Option<u32>, timeout: Option<u32>, target: &String) {
+    pub fn operate_ping(count: Result<u32, ParseIntError>, size: Result<u32, ParseIntError>, timeout: Result<u32, ParseIntError>, target: &String) {
         let mut args: Vec<String> = Vec::new();
 
-        if let Some(c) = count {
-            args.push("-n".to_string());
-            args.push(c.to_string());
-        }
+        args.push("-n".to_string());
+        
+        args.push(count.unwrap_or_else(|_| 4).to_string());
 
-        if let Some(s) = size {
-            args.push("-l".to_string());
-            args.push(s.to_string());
-        }
+        args.push("-l".to_string());
 
-        if let Some(t) = timeout {
-            args.push("-w".to_string());
-            args.push(t.to_string());
-        }
+        args.push(size.unwrap_or_else(|_| 64).to_string());
+        
+        args.push("-w".to_string());
+        args.push(timeout.unwrap_or_else(|_| 500).to_string());
 
         args.push(target.to_string());
 
@@ -69,7 +66,7 @@
             .expect("ping couldn't be executed");
     }
 
-    pub fn operate_netcalc(network_cidr: &String, info: bool, split: bool, split_value: &String, prefix: bool, prefix_value: &String, contains: bool, contains_value: &String) {
+    pub fn operate_netcalc(network_cidr: &String, info: bool, split_value: Result<u32, ParseIntError>, prefix_value: Result<u32, ParseIntError>, contains_value: Result<String, bool>) {
         if info {
             let info = get_network_info(network_cidr);
 
@@ -83,46 +80,40 @@
             println!("------------------------------------------------------------------------------");
         }
 
-        if prefix {
-            let new_prefix = u32::from_str(prefix_value);
+        let new_prefix = prefix_value.unwrap_or_else(|_| 0);
 
-            if new_prefix.is_err() {
-                println!("{}", new_prefix.err().unwrap().to_string());
-                return;
-            }
-
-            let nets = split_by_prefix(network_cidr, new_prefix.ok().unwrap());
-
-            if nets.is_err() {
-                println!("{}", nets.err().unwrap().to_string());
-                return;
-            }
-
-            println!("------------------------------------------------------------------------------");
-            print::network_info_list(nets.ok().unwrap());
-            println!("------------------------------------------------------------------------------");
+        if new_prefix == 0{
+            println!("Invalid prefix");
+            return;
         }
 
-        if split {
-            let count = u32::from_str(split_value);
-            if count.is_err() {
-                println!("{}", count.err().unwrap().to_string());
-                return;
-            }
+        let nets = split_by_prefix(network_cidr, new_prefix);
 
-            let nets = split_by_count(network_cidr, count.ok().unwrap());
-
-            if nets.is_err() {
-                println!("{}", nets.err().unwrap().to_string());
-                return;
-            }
-
-            println!("------------------------------------------------------------------------------");
-            print::network_info_list(nets.ok().unwrap());
-            println!("------------------------------------------------------------------------------");
+        if nets.is_err() {
+            println!("{}", nets.err().unwrap().to_string());
+            return; 
         }
 
-        if contains {
+        println!("------------------------------------------------------------------------------");
+        print::network_info_list(nets.ok().unwrap());
+        println!("------------------------------------------------------------------------------");
+
+        if split_value.is_err() {
+            println!("{}", split_value.err().unwrap().to_string());
+            return;
+        }
+
+        let nets = split_by_count(network_cidr, split_value.ok().unwrap());
+
+        if nets.is_err() {
+            println!("{}", nets.err().unwrap().to_string());
+            return;
+        }
+
+        println!("------------------------------------------------------------------------------");
+        print::network_info_list(nets.ok().unwrap());
+        println!("------------------------------------------------------------------------------");
+
             let info = get_network_info(network_cidr);
             if info.is_err() {
                 println!("{}", info.err().unwrap().to_string());
@@ -130,7 +121,9 @@
             }
             let info_to_print = info.clone().unwrap();
 
-            let ip_to_check_result = get_ip_from_str(contains_value);
+            let contains = contains_value.unwrap_or_else(|_| "".to_string());
+        
+            let ip_to_check_result = get_ip_from_str(&contains);
 
             if ip_to_check_result.is_err() {
                 println!("{}", ip_to_check_result.err().unwrap().to_string());
@@ -141,11 +134,10 @@
 
             println!("------------------------------------------------------------------------------");
             match result {
-                true => {println!("{}/{} contains {}", info_to_print.network_addr, info_to_print.prefix, contains_value)}
-                false => {println!("{}/{} does not contain {}", info_to_print.network_addr, info_to_print.prefix, contains_value)}
+                true => {println!("{}/{} contains {}", info_to_print.network_addr, info_to_print.prefix, contains)}
+                false => {println!("{}/{} does not contain {}", info_to_print.network_addr, info_to_print.prefix, contains)}
             }
             println!("------------------------------------------------------------------------------");
-        }
     }
 
     fn split_by_count(cidr: &String, count: u32) -> Result<Vec<String>, String> {
@@ -243,9 +235,10 @@
         return Ok(cidrs);
     }
 
-    pub fn operate_trace(resolve: bool, hops: i32, timeout: i32, target: &String) {
-        let max_hops = if hops > 0 { hops } else { 50 };
-        let timeout = if timeout == 0 { 2000 } else { timeout };
+    pub fn operate_trace(resolve: bool, hops: Result<u32, ParseIntError>, timeout: Result<u32, ParseIntError>, target: &String) {
+        let max_hops: u32 = hops.unwrap_or_else(|_| 50);
+
+        let timeout: u32 = timeout.unwrap_or_else(|_| { 500 });
         let mut ttl = 1;
         let mut reply_addr: Ipv4Addr = Ipv4Addr::from(u32::MIN);
         let target_addr_result = target.parse::<Ipv4Addr>();
@@ -344,7 +337,7 @@
 
     const COMMON_PORTS: &[u16] = &[21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 1433, 3306, 3389, 5432, 5900, 8080, 8443];
 
-    pub fn operate_portscan(ports: Vec<u16>, range: [u32; 2], common: bool, timeout: u64, target: Ipv4Addr) {
+    pub fn operate_portscan(ports: Vec<u16>, range: Option<[u32; 2]>, common: bool, timeout: u64, target: Ipv4Addr) {
         let mut open_ports = 0;
         let mut closed_ports = 0;
         let mut ports_empty = false;
@@ -352,6 +345,14 @@
         println!("{}", "-".repeat(66));
         if ports.is_empty() {ports_empty = true;}
         else {
+            println!("{}", "-".repeat(66));
+            print!("PORTS: |");
+            for port in ports.clone() {
+                print!(" {} |", port);
+            }
+            println!();
+            println!("{:<6} | {:<15} | {:<10} | {}", "Port", "Target", "Status", "Info");
+            println!("{}", "-".repeat(66));
             for port in ports {
                 let result = test_port(target, timeout, port);
 
@@ -362,8 +363,12 @@
             }
         }
 
-        if common == false && ports_empty {
-            for i  in range[0]..range[1]+1 {
+        if range != None {
+            println!("{}", "-".repeat(66));
+            println!("RANGE: {}-{}", range.unwrap()[0], range.unwrap()[1]);
+            println!("{:<6} | {:<15} | {:<10} | {}", "Port", "Target", "Status", "Info");
+            println!("{}", "-".repeat(66));
+            for i  in range.unwrap()[0]..range.unwrap()[1]+1 {
                 let result = test_port(target, timeout, i as u16);
 
                 match result {
@@ -372,7 +377,12 @@
                 }
             }
         }
-        else if common == true && ports_empty {
+
+        if common == true {
+            println!("{}", "-".repeat(66));
+            println!("COMMON:");
+            println!("{:<6} | {:<15} | {:<10} | {}", "Port", "Target", "Status", "Info");
+            println!("{}", "-".repeat(66));
             for port in COMMON_PORTS {
                 let result = test_port(target, timeout, *port);
 
