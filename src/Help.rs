@@ -11,8 +11,7 @@
             println!("  {:<14} Number of pings (default: 4)", format!("{} <count>", self.valid_args[2]));
             println!();
             println!("Example:");
-            println!("  {} google.com {} 4 {} 64 {} 1000",
-                     self.command, self.valid_args[2], self.valid_args[0], self.valid_args[1]);
+            println!("  {} google.com {} 4 {} 64 {} 1000", self.command, self.valid_args[2], self.valid_args[0], self.valid_args[1]);
         }
 
         pub fn help_all(&self)

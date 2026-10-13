@@ -2,7 +2,6 @@
     use std::collections::HashMap;
     use std::net::Ipv4Addr;
     use std::num::ParseIntError;
-    use std::string::ParseError;
     use crate::Operate::operate;
     use crate::Operate::operate::get_ip_from_str;
     use crate::Print::print;
@@ -83,9 +82,9 @@
 
         pub fn handle_netcalc(&self, input: &Input) {
             let mut info = false;
-            let mut split_value:Result<u32, ParseIntError> = "a".parse::<u32>();
-            let mut contains_value:Result<String, bool> = Err(false);
-            let mut prefix_value:Result<u32, ParseIntError> = "a".parse::<u32>();
+            let mut split_value:Result<u32, ParseIntError> = "0".parse::<u32>();
+            let mut contains_value:Result<String, bool> = Ok("".to_string());
+            let mut prefix_value:Result<u32, ParseIntError> = "0".parse::<u32>();
 
             let mut i = 0;
             while i < input.args.len() {
@@ -131,7 +130,7 @@
 
         pub fn handle_trace(&self, input: &Input) {
             let mut resolve = false;
-            let mut hops: Result<u32, ParseIntError> = "a".parse::<u32>(); ;
+            let mut hops: Result<u32, ParseIntError> = "a".parse::<u32>();
             let mut timeout: Result<u32, ParseIntError> = "a".parse::<u32>();
 
             let mut i = 0;
@@ -269,7 +268,7 @@
 
             if parts.len() == 1 {
                 let null_args = Vec::new();
-                return Input::new(null_args, parts[0].to_string(), " ".to_string());
+                return Input::new(null_args, parts[0].to_string(), "".to_string());
             }
 
             let command = parts[0].to_string();

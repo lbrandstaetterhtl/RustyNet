@@ -60,7 +60,7 @@
 
         args.push(target.to_string());
 
-        let status = ProcessCommand::new("ping")
+        let _ = ProcessCommand::new("ping")
             .args(&args)
             .status()                     
             .expect("ping couldn't be executed");
@@ -75,54 +75,65 @@
                 return;
             }
 
+            println!("INFO: ");
             println!("------------------------------------------------------------------------------");
             print::network_info(&info.ok().unwrap());
             println!("------------------------------------------------------------------------------");
         }
 
-        let new_prefix = prefix_value.unwrap_or_else(|_| 0);
-
-        if new_prefix == 0{
-            println!("Invalid prefix");
+        if prefix_value.is_err() {
+            println!("{}", prefix_value.clone().err().unwrap().to_string());
             return;
         }
+        else if prefix_value.clone() != Ok(0) {
+            let new_prefix = prefix_value.unwrap();
 
-        let nets = split_by_prefix(network_cidr, new_prefix);
+            let nets = split_by_prefix(network_cidr, new_prefix);
 
-        if nets.is_err() {
-            println!("{}", nets.err().unwrap().to_string());
-            return; 
+            if nets.is_err() {
+                println!("{}", nets.err().unwrap().to_string());
+                return;
+            }
+
+            println!("PREFIX SPLIT: ");
+            println!("------------------------------------------------------------------------------");
+            print::network_info_list(nets.ok().unwrap());
+            println!("------------------------------------------------------------------------------");
         }
-
-        println!("------------------------------------------------------------------------------");
-        print::network_info_list(nets.ok().unwrap());
-        println!("------------------------------------------------------------------------------");
 
         if split_value.is_err() {
             println!("{}", split_value.err().unwrap().to_string());
             return;
         }
+        else if split_value.clone() != Ok(0) {
+            let nets = split_by_count(network_cidr, split_value.ok().unwrap());
 
-        let nets = split_by_count(network_cidr, split_value.ok().unwrap());
+            if nets.is_err() {
+                println!("{}", nets.err().unwrap().to_string());
+                return;
+            }
 
-        if nets.is_err() {
-            println!("{}", nets.err().unwrap().to_string());
-            return;
+            println!("SPLIT: ");
+            println!("------------------------------------------------------------------------------");
+            print::network_info_list(nets.ok().unwrap());
+            println!("------------------------------------------------------------------------------");
         }
 
-        println!("------------------------------------------------------------------------------");
-        print::network_info_list(nets.ok().unwrap());
-        println!("------------------------------------------------------------------------------");
-
+        if contains_value.is_err() {
+            println!("{}", contains_value.err().unwrap().to_string());
+            return;
+        }
+        else if contains_value.clone() != Ok("".to_string()) {
             let info = get_network_info(network_cidr);
             if info.is_err() {
                 println!("{}", info.err().unwrap().to_string());
                 return;
             }
+
             let info_to_print = info.clone().unwrap();
 
             let contains = contains_value.unwrap_or_else(|_| "".to_string());
-        
+
             let ip_to_check_result = get_ip_from_str(&contains);
 
             if ip_to_check_result.is_err() {
@@ -132,12 +143,14 @@
 
             let result = info_to_print.contains(ip_to_check_result.unwrap());
 
+            println!("CONTAINS: ");
             println!("------------------------------------------------------------------------------");
             match result {
-                true => {println!("{}/{} contains {}", info_to_print.network_addr, info_to_print.prefix, contains)}
-                false => {println!("{}/{} does not contain {}", info_to_print.network_addr, info_to_print.prefix, contains)}
+                true => { println!("{}/{} contains {}", info_to_print.network_addr, info_to_print.prefix, contains) }
+                false => { println!("{}/{} does not contain {}", info_to_print.network_addr, info_to_print.prefix, contains) }
             }
             println!("------------------------------------------------------------------------------");
+        }
     }
 
     fn split_by_count(cidr: &String, count: u32) -> Result<Vec<String>, String> {
@@ -149,7 +162,7 @@
                     return Err(new_prefix.err().unwrap());
                 }
 
-                let (ip, prefix, mask) = new_prefix.ok().unwrap();
+                let (_, prefix, _) = new_prefix.ok().unwrap();
                 return split_by_prefix(cidr, prefix + i);
             }
         }
@@ -340,11 +353,10 @@
     pub fn operate_portscan(ports: Vec<u16>, range: Option<[u32; 2]>, common: bool, timeout: u64, target: Ipv4Addr) {
         let mut open_ports = 0;
         let mut closed_ports = 0;
-        let mut ports_empty = false;
         println!("{:<6} | {:<15} | {:<10} | {}", "Port", "Target", "Status", "Info");
         println!("{}", "-".repeat(66));
-        if ports.is_empty() {ports_empty = true;}
-        else {
+
+        if !ports.is_empty() {
             println!("{}", "-".repeat(66));
             print!("PORTS: |");
             for port in ports.clone() {
@@ -410,8 +422,8 @@
         let result = TcpStream::connect_timeout(&socket_addr.unwrap(), duration);
 
         match result {
-            Ok(_stream) => Ok(format!("{:<6} | {:<15} | {:<7} | {}", port, target, "open", "")),
-            Err(err) => Err(format!("{:<6} | {:<15} | {:<7} | {}", port, target, "closed", err)),
+            Ok(_stream) => Ok(format!("{:<6} | {:<15} | {:<10} | {}", port, target, "open", "")),
+            Err(err) => Err(format!("{:<6} | {:<15} | {:<10} | {}", port, target, "closed", err)),
         }
     }
 
