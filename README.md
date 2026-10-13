@@ -51,11 +51,11 @@ Mit `<befehl> --h` wird die Hilfe zu einem einzelnen Befehl angezeigt.
 ping <ziel> [OPTIONEN]
 ```
 
-| Option              | Beschreibung                    |
-|---------------------|---------------------------------|
-| `--count <anzahl>`  | Anzahl der Pings                |
-| `--size <bytes>`    | Paketgröße in Bytes             |
-| `--timeout <ms>`    | Timeout pro Antwort in ms       |
+| Option              | Beschreibung                                |
+|---------------------|---------------------------------------------|
+| `--count <anzahl>`  | Anzahl der Pings (Standard: 4)              |
+| `--size <bytes>`    | Paketgröße in Bytes (Standard: 64)          |
+| `--timeout <ms>`    | Timeout pro Antwort in ms (Standard: 500)   |
 
 ```
 > ping google.com --count 4 --size 64 --timeout 1000
@@ -70,7 +70,7 @@ trace <ip> [OPTIONEN]
 | Option           | Beschreibung                                   |
 |------------------|------------------------------------------------|
 | `--ttl <n>`      | Maximale Anzahl an Hops (Standard: 50)         |
-| `--timeout <ms>` | Timeout pro Hop in ms (Standard: 2000)         |
+| `--timeout <ms>` | Timeout pro Hop in ms (Standard: 500)          |
 | `--resolve`      | Hostnamen der einzelnen Hops auflösen          |
 
 Das Ziel muss aktuell als IPv4-Adresse angegeben werden.
@@ -100,6 +100,12 @@ netcalc <netz/präfix> [OPTIONEN]
 > netcalc 10.10.15.0/24 --contains 10.10.15.42
 ```
 
+Die Optionen lassen sich kombinieren, die Ergebnisse erscheinen dann in eigenen Abschnitten (`INFO`, `PREFIX SPLIT`, `SPLIT`, `CONTAINS`):
+
+```
+> netcalc 10.10.15.0/24 --info --contains 10.10.15.42
+```
+
 Beispielausgabe von `--info`:
 
 ```
@@ -124,17 +130,18 @@ Geprüft wird per TCP-Verbindungsaufbau, ob ein Port offen ist.
 | Option                  | Beschreibung                                                  |
 |-------------------------|---------------------------------------------------------------|
 | `--ports <n,n,...>`     | Bestimmte Ports scannen (kommagetrennt)                       |
-| `--range <start-ende>`  | Einen Portbereich scannen (Standard: 0-1023)                  |
+| `--range <start-ende>`  | Einen Portbereich scannen                                     |
 | `--common`              | Gängige Ports scannen (21, 22, 80, 443, 3306, 3389, 8080, …)  |
 | `--timeout <ms>`        | Timeout pro Port in ms (Standard: 2000)                       |
 
-Werden mehrere Optionen kombiniert, gilt die Reihenfolge `--ports` vor `--common` vor `--range`.
-Ohne Option wird der Bereich 0-1023 gescannt.
+Die Optionen lassen sich kombinieren: Jede angegebene Variante wird nacheinander in einem eigenen Abschnitt gescannt.
+Ohne `--ports`, `--range` oder `--common` werden automatisch die gängigen Ports gescannt.
 
 ```
 > portscan 192.168.0.1 --common
 > portscan 192.168.0.1 --ports 22,80,443
 > portscan 192.168.0.1 --range 1-1024 --timeout 100
+> portscan 192.168.0.1 --common --ports 8000,9000
 ```
 
 Am Ende zeigt RustyNet an, wie viele Ports offen und wie viele geschlossen waren.
@@ -153,3 +160,4 @@ src/
 ## Abhängigkeiten
 
 - [`clearscreen`](https://crates.io/crates/clearscreen) – plattformübergreifendes Leeren des Terminals
+- [`regex`](https://crates.io/crates/regex) – Prüfen der Eingabe bei `portscan --range`
